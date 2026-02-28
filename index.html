@@ -4430,7 +4430,10 @@ async function login(){
       res = await fetch(API_URL + "auth/login", {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + localStorage.getItem("auth_token")
+        },
         body: JSON.stringify({ username, password })
       });
     } catch (netErr) {
@@ -4455,6 +4458,8 @@ async function login(){
       throw new Error("Invalid response from server");
     }
     
+    localStorage.setItem("username", json.data.username);
+    localStorage.setItem("role", json.data.role);
     localStorage.setItem("sessionToken", data.sessionToken);
     sessionToken = data.sessionToken;
     currentUser = { username: data.username, role: data.role };
