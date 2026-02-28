@@ -3164,7 +3164,7 @@ async function loadTaxInvoiceState(){
     const res = await fetch(API_URL + "tax-invoice/state", {
       credentials: "include",
       headers: {
-        "X-Session-Token": sessionToken,
+        "X-Session-Token": localStorage.getItem("sessionToken"),
         "Authorization": "Bearer " + localStorage.getItem("auth_token")
       }
     });
@@ -3195,7 +3195,7 @@ async function saveTaxInvoiceState(){
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      "X-Session-Token": sessionToken,
+      "X-Session-Token": localStorage.getItem("sessionToken"),
       "Authorization": "Bearer " + localStorage.getItem("auth_token")
     },
     body: JSON.stringify({
@@ -4078,7 +4078,7 @@ async function toggleCurrentPassword(username, button){
         const res = await fetch(API_URL + "users/" + encodeURIComponent(username) + "/password", {
           credentials: "include",
           headers: {
-            "X-Session-Token": sessionToken,
+            "X-Session-Token": localStorage.getItem("sessionToken"),
             "Authorization": "Bearer " + localStorage.getItem("auth_token")
           }
         });
@@ -4123,7 +4123,7 @@ async function loadUsers(){
     const res = await fetch(API_URL + "users", {
       credentials: "include",
       headers: {
-        "X-Session-Token": sessionToken,
+        "X-Session-Token": localStorage.getItem("sessionToken"),
         "Authorization": "Bearer " + localStorage.getItem("auth_token")
       }
     });
@@ -4229,7 +4229,7 @@ async function updateUserRole(username){
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
-        "X-Session-Token": sessionToken,
+        "X-Session-Token": localStorage.getItem("sessionToken"),
         "Authorization": "Bearer " + localStorage.getItem("auth_token")
       },
       body: JSON.stringify({ role })
@@ -4279,7 +4279,7 @@ async function saveUpdatePassword(){
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
-        "X-Session-Token": sessionToken,
+        "X-Session-Token": localStorage.getItem("sessionToken"),
         "Authorization": "Bearer " + localStorage.getItem("auth_token")
       },
       body: JSON.stringify({ password })
@@ -4320,8 +4320,8 @@ async function addUser(){
       "Content-Type": "application/json",
       "Authorization": "Bearer " + localStorage.getItem("auth_token")
     };
-    if (sessionToken){
-      headers["X-Session-Token"] = sessionToken;
+    if (localStorage.getItem("sessionToken")){
+      headers["X-Session-Token"] = localStorage.getItem("sessionToken");
     }
 
     console.log("Creating user:", { username, role, passwordLength: password.length });
@@ -4362,6 +4362,7 @@ async function apiGet(params){
     const res = await fetch(url.toString(), {
       credentials: "include",
       headers: {
+        "X-Session-Token": localStorage.getItem("sessionToken"),
         "Authorization": "Bearer " + localStorage.getItem("auth_token")
       }
     });
@@ -4457,6 +4458,7 @@ async function login(){
       throw new Error("Invalid response from server");
     }
     
+    localStorage.setItem("sessionToken", data.sessionToken);
     sessionToken = data.sessionToken;
     currentUser = { username: data.username, role: data.role };
     st.textContent = "";
@@ -4784,7 +4786,7 @@ async function saveEditTxDetails(){
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
-        "X-Session-Token": sessionToken,
+        "X-Session-Token": localStorage.getItem("sessionToken"),
         "Authorization": "Bearer " + localStorage.getItem("auth_token")
       },
       body: JSON.stringify({ site, paidBy, notes })
