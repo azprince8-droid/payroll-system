@@ -4425,9 +4425,9 @@ async function login(){
     }
     
     // Use POST /auth/login (avoids URL length limits and keeps password out of URL)
-    let res;
+    let response;
     try {
-      res = await fetch(API_URL + "auth/login", {
+      response = await fetch(API_URL + "auth/login", {
         method: "POST",
         credentials: "include",
         headers: {
@@ -4439,13 +4439,16 @@ async function login(){
     } catch (netErr) {
       throw new Error("Cannot reach server. Is it running at " + API_URL + " ?");
     }
+    console.log("LOGIN fetch status:", response.status);
+    const raw = await response.text();
+    console.log("LOGIN raw response:", raw);
     let json;
     try {
-      json = await res.json();
-    } catch (_) {
-      throw new Error("Server returned invalid response (status " + res.status + ")");
+      json = JSON.parse(raw);
+    } catch (e) {
+      throw new Error("Server did not return JSON. Raw: " + raw.slice(0, 200));
     }
-    console.log("LOGIN JSON:", json);
+    console.log("LOGIN parsed JSON:", json);
     if (!json || json.ok !== true || !json.data || !json.data.access_token) {
       throw new Error("Invalid response from server");
     }
