@@ -2230,6 +2230,10 @@ def handle_get(
     try:
         act = (action or "").strip()
 
+        # Public: root health/info response when no action is provided.
+        if not act:
+            return {"ok": True, "data": {"message": "Payroll API is running"}}
+
         # Public: login
         if act == "login":
             data = login_(db, username, password)
