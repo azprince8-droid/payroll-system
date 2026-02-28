@@ -2190,6 +2190,29 @@ def save_tax_invoice_state(
         return {"ok": False, "error": str(exc)}
 
 
+@api_router.get("/")
+def api_compat_get(
+    action: str = Query("", description="Compatibility action"),
+    db: Session = Depends(get_db),
+    sess: Dict[str, Any] = Depends(get_current_session),
+) -> Dict[str, Any]:
+    """
+    Compatibility endpoint for frontend calls like /api/?action=...
+    """
+    try:
+        act = (action or "").strip().lower()
+
+        if act == "employees":
+            return {"ok": True, "data": get_employees_(db)}
+
+        if act in {"me", "session"}:
+            return {"ok": True, "data": {"username": sess["username"], "role": sess["role"]}}
+
+        return {"ok": False, "error": "Unknown action"}
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": str(exc)}
+
+
 @app.on_event("startup")
 def on_startup() -> None:
     init_db()
