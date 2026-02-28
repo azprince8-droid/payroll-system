@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import re
 import time
 import uuid
@@ -37,20 +38,12 @@ PUBLIC_PATHS = {"/docs", "/openapi.json", "/redoc"}
 
 # ================= Database setup =================
 
-DATABASE_URL = "sqlite:///./payroll.db"
+DATABASE_URL = os.getenv("DATABASE_URL")
 
+if not DATABASE_URL:
+    DATABASE_URL = "sqlite:///./payroll.db"
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={
-        "check_same_thread": False,
-        "timeout": 30,
-    },
-    pool_pre_ping=True,
-    pool_recycle=3600,
-    pool_size=10,
-    max_overflow=20,
-)
+engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
