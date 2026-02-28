@@ -1606,7 +1606,7 @@ app = FastAPI(title="Payroll System API (FastAPI)")
 # For development we allow all origins; tighten this if you deploy publicly.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://payroll-system-production-9ef7.up.railway.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
