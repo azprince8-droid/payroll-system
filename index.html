@@ -3163,7 +3163,10 @@ async function loadTaxInvoiceState(){
   try {
     const res = await fetch(API_URL + "tax-invoice/state", {
       credentials: "include",
-      headers: { "X-Session-Token": sessionToken }
+      headers: {
+        "X-Session-Token": sessionToken,
+        "Authorization": "Bearer " + localStorage.getItem("auth_token")
+      }
     });
     const json = await res.json();
     if (!json.ok) throw new Error(json.error || "Failed to load tax invoice state");
@@ -3192,7 +3195,8 @@ async function saveTaxInvoiceState(){
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      "X-Session-Token": sessionToken
+      "X-Session-Token": sessionToken,
+      "Authorization": "Bearer " + localStorage.getItem("auth_token")
     },
     body: JSON.stringify({
       fileName: String((fileNameInput && fileNameInput.value) || "Tax Invoice"),
@@ -4073,7 +4077,10 @@ async function toggleCurrentPassword(username, button){
       try {
         const res = await fetch(API_URL + "users/" + encodeURIComponent(username) + "/password", {
           credentials: "include",
-          headers: { "X-Session-Token": sessionToken }
+          headers: {
+            "X-Session-Token": sessionToken,
+            "Authorization": "Bearer " + localStorage.getItem("auth_token")
+          }
         });
         const json = await res.json();
         if (!json.ok) throw new Error(json.error || "Failed to fetch password");
@@ -4115,7 +4122,10 @@ async function loadUsers(){
     console.log("Loading users with session token:", sessionToken ? "present" : "missing");
     const res = await fetch(API_URL + "users", {
       credentials: "include",
-      headers: { "X-Session-Token": sessionToken }
+      headers: {
+        "X-Session-Token": sessionToken,
+        "Authorization": "Bearer " + localStorage.getItem("auth_token")
+      }
     });
     
     if (!res.ok) {
@@ -4219,7 +4229,8 @@ async function updateUserRole(username){
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
-        "X-Session-Token": sessionToken
+        "X-Session-Token": sessionToken,
+        "Authorization": "Bearer " + localStorage.getItem("auth_token")
       },
       body: JSON.stringify({ role })
     });
@@ -4268,7 +4279,8 @@ async function saveUpdatePassword(){
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
-        "X-Session-Token": sessionToken
+        "X-Session-Token": sessionToken,
+        "Authorization": "Bearer " + localStorage.getItem("auth_token")
       },
       body: JSON.stringify({ password })
     });
@@ -4306,6 +4318,7 @@ async function addUser(){
 
     const headers = {
       "Content-Type": "application/json",
+      "Authorization": "Bearer " + localStorage.getItem("auth_token")
     };
     if (sessionToken){
       headers["X-Session-Token"] = sessionToken;
@@ -4347,7 +4360,10 @@ async function apiGet(params){
   
   try {
     const res = await fetch(url.toString(), {
-      credentials: "include"
+      credentials: "include",
+      headers: {
+        "Authorization": "Bearer " + localStorage.getItem("auth_token")
+      }
     });
     if (!res.ok) {
       if (res.status === 401) {
@@ -4427,6 +4443,13 @@ async function login(){
     }
     if (!json.ok) {
       throw new Error(json.error || "Login failed");
+    }
+    const accessToken = (json && json.access_token) || (json && json.data && json.data.access_token);
+    const token = (json && json.token) || (json && json.data && json.data.token);
+    if (accessToken || token) {
+      if (accessToken) {
+        localStorage.setItem("auth_token", accessToken);
+      }
     }
     
     const data = json.data;
@@ -4761,7 +4784,8 @@ async function saveEditTxDetails(){
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
-        "X-Session-Token": sessionToken
+        "X-Session-Token": sessionToken,
+        "Authorization": "Bearer " + localStorage.getItem("auth_token")
       },
       body: JSON.stringify({ site, paidBy, notes })
     });
