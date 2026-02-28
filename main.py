@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, date
 from typing import Any, Dict, List, Optional
 
 import jwt
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -1619,7 +1619,13 @@ class TaxInvoiceStatePayload(BaseModel):
 # ================= FastAPI app & routing =================
 
 
-app = FastAPI(title="Payroll System API (FastAPI)")
+app = FastAPI(
+    title="Payroll System API (FastAPI)",
+    docs_url="/api/docs",
+    openapi_url="/api/openapi.json",
+    redoc_url="/api/redoc",
+)
+api_router = APIRouter(prefix="/api")
 
 # Allow browser frontends (file:// or other ports) to call this API.
 # For development we allow all origins; tighten this if you deploy publicly.
@@ -1644,7 +1650,7 @@ async def auth_middleware(request: Request, call_next):
 # ----- REST-style endpoints -----
 
 
-@app.post("/auth/login")
+@api_router.post("/auth/login")
 def api_login(payload: LoginRequest, db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
     Login endpoint (body-based). Use POST so password is not sent in URL.
@@ -1662,7 +1668,7 @@ def api_login(payload: LoginRequest, db: Session = Depends(get_db)) -> Dict[str,
         return {"ok": False, "error": f"Login failed: {str(exc)}"}
 
 
-@app.post("/auth/seed-admin")
+@api_router.post("/auth/seed-admin")
 def api_seed_admin(db: Session = Depends(get_db)) -> Dict[str, Any]:
     try:
         existing = db.query(User).first()
@@ -1677,7 +1683,7 @@ def api_seed_admin(db: Session = Depends(get_db)) -> Dict[str, Any]:
         return {"ok": False, "error": str(exc)}
 
 
-@app.get("/auth/ping")
+@api_router.get("/auth/ping")
 def api_ping(sess: Dict[str, Any] = Depends(get_current_session)) -> Dict[str, Any]:
     """
     Simple health/auth check using the current session.
@@ -1688,7 +1694,7 @@ def api_ping(sess: Dict[str, Any] = Depends(get_current_session)) -> Dict[str, A
     }
 
 
-@app.get("/users")
+@api_router.get("/users")
 def list_users(
     db: Session = Depends(get_db),
     sess: Dict[str, Any] = Depends(get_current_session),
@@ -1712,7 +1718,7 @@ def list_users(
         return {"ok": False, "error": str(exc)}
 
 
-@app.post("/users")
+@api_router.post("/users")
 def create_user(
     payload: UserCreate,
     db: Session = Depends(get_db),
@@ -1753,7 +1759,7 @@ def create_user(
         return {"ok": False, "error": str(exc)}
 
 
-@app.get("/users/{username}")
+@api_router.get("/users/{username}")
 def get_user(
     username: str,
     db: Session = Depends(get_db),
@@ -1781,7 +1787,7 @@ def get_user(
         return {"ok": False, "error": str(exc)}
 
 
-@app.get("/users/{username}/password")
+@api_router.get("/users/{username}/password")
 def get_user_password(
     username: str,
     db: Session = Depends(get_db),
@@ -1808,7 +1814,7 @@ def get_user_password(
         return {"ok": False, "error": str(exc)}
 
 
-@app.put("/users/{username}")
+@api_router.put("/users/{username}")
 def update_user(
     username: str,
     payload: UserUpdate,
@@ -1835,7 +1841,7 @@ def update_user(
         return {"ok": False, "error": str(exc)}
 
 
-@app.get("/employees")
+@api_router.get("/employees")
 def list_employees(
     db: Session = Depends(get_db),
     sess: Dict[str, Any] = Depends(get_current_session),
@@ -1851,7 +1857,7 @@ def list_employees(
         return {"ok": False, "error": str(exc)}
 
 
-@app.post("/employees")
+@api_router.post("/employees")
 def create_employee(
     payload: EmployeeCreate,
     db: Session = Depends(get_db),
@@ -1878,7 +1884,7 @@ def create_employee(
         return {"ok": False, "error": str(exc)}
 
 
-@app.get("/employees/{emp_id}")
+@api_router.get("/employees/{emp_id}")
 def get_employee(
     emp_id: str,
     db: Session = Depends(get_db),
@@ -1897,7 +1903,7 @@ def get_employee(
         return {"ok": False, "error": str(exc)}
 
 
-@app.put("/employees/{emp_id}")
+@api_router.put("/employees/{emp_id}")
 def update_employee(
     emp_id: str,
     payload: EmployeeUpdate,
@@ -1925,7 +1931,7 @@ def update_employee(
         return {"ok": False, "error": str(exc)}
 
 
-@app.patch("/employees/{emp_id}/status")
+@api_router.patch("/employees/{emp_id}/status")
 def update_employee_status(
     emp_id: str,
     status_payload: Dict[str, str],
@@ -1946,7 +1952,7 @@ def update_employee_status(
         return {"ok": False, "error": str(exc)}
 
 
-@app.get("/employees/{emp_id}/transactions")
+@api_router.get("/employees/{emp_id}/transactions")
 def employee_transactions(
     emp_id: str,
     from_: Optional[str] = Query(None, alias="from"),
@@ -1966,7 +1972,7 @@ def employee_transactions(
         return {"ok": False, "error": str(exc)}
 
 
-@app.get("/employees/{emp_id}/summary")
+@api_router.get("/employees/{emp_id}/summary")
 def employee_summary(
     emp_id: str,
     from_: Optional[str] = Query(None, alias="from"),
@@ -1987,7 +1993,7 @@ def employee_summary(
         return {"ok": False, "error": str(exc)}
 
 
-@app.get("/transactions")
+@api_router.get("/transactions")
 def list_transactions(
     empId: Optional[str] = None,
     from_: Optional[str] = Query(None, alias="from"),
@@ -2012,7 +2018,7 @@ def list_transactions(
         return {"ok": False, "error": str(exc)}
 
 
-@app.get("/transactions/{tx_id}")
+@api_router.get("/transactions/{tx_id}")
 def get_transaction(
     tx_id: str,
     db: Session = Depends(get_db),
@@ -2044,7 +2050,7 @@ def get_transaction(
         return {"ok": False, "error": str(exc)}
 
 
-@app.delete("/transactions/{tx_id}")
+@api_router.delete("/transactions/{tx_id}")
 def delete_transaction(
     tx_id: str,
     db: Session = Depends(get_db),
@@ -2061,7 +2067,7 @@ def delete_transaction(
         return {"ok": False, "error": str(exc)}
 
 
-@app.patch("/transactions/{tx_id}")
+@api_router.patch("/transactions/{tx_id}")
 def update_transaction_details(
     tx_id: str,
     payload: TransactionDetailsUpdate,
@@ -2084,7 +2090,7 @@ def update_transaction_details(
         return {"ok": False, "error": str(exc)}
 
 
-@app.post("/transactions")
+@api_router.post("/transactions")
 def create_transaction(
     payload: TransactionCreate,
     db: Session = Depends(get_db),
@@ -2110,7 +2116,7 @@ def create_transaction(
         return {"ok": False, "error": str(exc)}
 
 
-@app.post("/transactions/bulk")
+@api_router.post("/transactions/bulk")
 def create_transactions_bulk(
     payload: TransactionBulkCreate,
     db: Session = Depends(get_db),
@@ -2147,7 +2153,7 @@ def create_transactions_bulk(
         return {"ok": False, "error": str(exc)}
 
 
-@app.get("/tax-invoice/state")
+@api_router.get("/tax-invoice/state")
 def get_tax_invoice_state(
     db: Session = Depends(get_db),
     sess: Dict[str, Any] = Depends(get_current_session),
@@ -2162,7 +2168,7 @@ def get_tax_invoice_state(
         return {"ok": False, "error": str(exc)}
 
 
-@app.post("/tax-invoice/state")
+@api_router.post("/tax-invoice/state")
 def save_tax_invoice_state(
     payload: TaxInvoiceStatePayload,
     db: Session = Depends(get_db),
@@ -2189,7 +2195,7 @@ def on_startup() -> None:
     init_db()
 
 
-@app.get("/health")
+@api_router.get("/health")
 def handle_get(
     action: str = Query("", description="Action name, similar to Apps Script doGet"),
     # Auth
@@ -2579,6 +2585,9 @@ def handle_get(
 
     except Exception as exc:
         return {"ok": False, "error": str(exc)}
+
+
+app.include_router(api_router)
 
 
 BASE_DIR = Path(__file__).resolve().parent
