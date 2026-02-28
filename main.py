@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+from pathlib import Path
 import re
 import time
 import uuid
@@ -2188,7 +2189,7 @@ def on_startup() -> None:
     init_db()
 
 
-@app.get("/")
+@app.get("/health")
 def handle_get(
     action: str = Query("", description="Action name, similar to Apps Script doGet"),
     # Auth
@@ -2580,7 +2581,11 @@ def handle_get(
         return {"ok": False, "error": str(exc)}
 
 
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
+
+if STATIC_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
 
 
 # If you want to run with: uvicorn main:app --reload
