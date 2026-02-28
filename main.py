@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime, timedelta, date
 from typing import Any, Dict, List, Optional
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import (
@@ -32,6 +32,7 @@ SESSION_TTL_SECONDS = 8 * 60 * 60
 SUPER_ADMIN_USERNAME = "superadmin"
 SUPER_ADMIN_PASSWORD = "93417@Iphone"
 SUPER_ADMIN_ROLE = "admin"
+PUBLIC_PATHS = {"/docs", "/openapi.json", "/redoc"}
 
 
 # ================= Database setup =================
@@ -1617,6 +1618,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    if request.url.path in PUBLIC_PATHS:
+        return await call_next(request)
+
+    # Keep your existing session/login checks here if you enforce auth globally.
+    return await call_next(request)
 
 
 # ----- REST-style endpoints -----
