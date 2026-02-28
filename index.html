@@ -3162,6 +3162,7 @@ async function loadTaxInvoiceState(){
   if (taxInvoiceStateLoaded) return;
   try {
     const res = await fetch(API_URL + "tax-invoice/state", {
+      credentials: "include",
       headers: { "X-Session-Token": sessionToken }
     });
     const json = await res.json();
@@ -3188,6 +3189,7 @@ async function saveTaxInvoiceState(){
   if (!sheet) return;
   const res = await fetch(API_URL + "tax-invoice/state", {
     method: "POST",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       "X-Session-Token": sessionToken
@@ -4070,6 +4072,7 @@ async function toggleCurrentPassword(username, button){
       // Fetch actual password
       try {
         const res = await fetch(API_URL + "users/" + encodeURIComponent(username) + "/password", {
+          credentials: "include",
           headers: { "X-Session-Token": sessionToken }
         });
         const json = await res.json();
@@ -4111,6 +4114,7 @@ async function loadUsers(){
   try{
     console.log("Loading users with session token:", sessionToken ? "present" : "missing");
     const res = await fetch(API_URL + "users", {
+      credentials: "include",
       headers: { "X-Session-Token": sessionToken }
     });
     
@@ -4212,6 +4216,7 @@ async function updateUserRole(username){
 
     const res = await fetch(API_URL + "users/" + encodeURIComponent(username), {
       method: "PUT",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
         "X-Session-Token": sessionToken
@@ -4260,6 +4265,7 @@ async function saveUpdatePassword(){
     btn.disabled = true;
     const res = await fetch(API_URL + "users/" + encodeURIComponent(_updatePasswordUsername), {
       method: "PUT",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
         "X-Session-Token": sessionToken
@@ -4309,6 +4315,7 @@ async function addUser(){
     
     const res = await fetch(API_URL + "users", {
       method: "POST",
+      credentials: "include",
       headers,
       body: JSON.stringify({ username, password, role })
     });
@@ -4339,7 +4346,9 @@ async function apiGet(params){
   Object.keys(params).forEach(k => url.searchParams.set(k, params[k]));
   
   try {
-    const res = await fetch(url.toString());
+    const res = await fetch(url.toString(), {
+      credentials: "include"
+    });
     if (!res.ok) {
       if (res.status === 401) {
         handleSessionExpired("Session expired. Please login again.");
@@ -4403,6 +4412,7 @@ async function login(){
     try {
       res = await fetch(API_URL + "auth/login", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password })
       });
@@ -4748,6 +4758,7 @@ async function saveEditTxDetails(){
     btn.disabled = true;
     const res = await fetch(API_URL + "transactions/" + encodeURIComponent(_editingTxId), {
       method: "PATCH",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
         "X-Session-Token": sessionToken
