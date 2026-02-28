@@ -2150,6 +2150,33 @@ def save_tax_invoice_state(
         return {"ok": False, "error": str(exc)}
 
 
+@app.get("/debug-db")
+def debug_db():
+    # 1) What database am I connected to?
+    db_name = None
+    db_user = None
+    try:
+        with engine.connect() as conn:
+            # Works on Postgres (Neon)
+            db_name = conn.execute(text("select current_database()")).scalar()
+            db_user = conn.execute(text("select current_user")).scalar()
+    except Exception as e:
+        return {"ok": False, "where": "db_identity", "error": str(e)}
+
+    # 2) List tables in public schema (Postgres)
+    try:
+        with engine.connect() as conn:
+            tables = conn.execute(text("""
+                select tablename
+                from pg_catalog.pg_tables
+                where schemaname = 'public'
+                order by tablename;
+            """)).fetchall()
+        return {"ok": True, "current_database": db_name, "current_user": db_user, "tables": [t[0] for t in tables]}
+    except Exception as e:
+        return {"ok": False, "where": "list_tables", "error": str(e), "current_database": db_name, "current_user": db_user}
+
+
 @app.on_event("startup")
 def on_startup() -> None:
     init_db()
