@@ -9,6 +9,7 @@ import uuid
 from datetime import datetime, timedelta, date
 from typing import Any, Dict, List, Optional
 
+import jwt
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -30,6 +31,8 @@ from sqlalchemy.orm import Session, declarative_base, relationship, sessionmaker
 
 
 SESSION_TTL_SECONDS = 8 * 60 * 60
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change-this-jwt-secret")
+JWT_ALGORITHM = "HS256"
 SUPER_ADMIN_USERNAME = "superadmin"
 SUPER_ADMIN_PASSWORD = "93417@Iphone"
 SUPER_ADMIN_ROLE = "admin"
@@ -245,32 +248,41 @@ def get_db() -> Session:
 
 # ================= Session handling =================
 
-_sessions: Dict[str, Dict[str, Any]] = {}
-
-
 def _create_session(username: str, role: str) -> Dict[str, Any]:
-    token = str(uuid.uuid4())
     now = datetime.utcnow()
-    _sessions[token] = {
+    payload = {
+        "sub": username,
+        "role": role,
+        "iat": now,
+        "exp": now + timedelta(seconds=SESSION_TTL_SECONDS),
+    }
+    token = jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+    if isinstance(token, bytes):
+        token = token.decode("utf-8")
+    return {
+        "access_token": token,
+        "token_type": "bearer",
         "username": username,
         "role": role,
-        "createdAt": now.isoformat(),
-        "expiresAt": (now + timedelta(seconds=SESSION_TTL_SECONDS)).isoformat(),
+        "ttlSeconds": SESSION_TTL_SECONDS,
     }
-    return {"sessionToken": token, "username": username, "role": role, "ttlSeconds": SESSION_TTL_SECONDS}
 
 
 def require_session_(token: Optional[str]) -> Dict[str, Any]:
     if not token:
         raise ValueError("Session expired. Please login again.")
-    sess = _sessions.get(token)
-    if not sess:
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+    except jwt.ExpiredSignatureError:
         raise ValueError("Session expired. Please login again.")
-    expires_at = datetime.fromisoformat(sess["expiresAt"])
-    if expires_at < datetime.utcnow():
-        _sessions.pop(token, None)
+    except jwt.InvalidTokenError:
         raise ValueError("Session expired. Please login again.")
-    return {"username": sess["username"], "role": sess["role"]}
+
+    username = str(payload.get("sub") or "").strip()
+    role = str(payload.get("role") or "").strip().lower()
+    if not username or not role:
+        raise ValueError("Session expired. Please login again.")
+    return {"username": username, "role": role}
 
 
 def require_role_(sess: Dict[str, Any], allowed: List[str]) -> None:
@@ -280,6 +292,7 @@ def require_role_(sess: Dict[str, Any], allowed: List[str]) -> None:
 
 
 def get_current_session(
+    authorization: Optional[str] = Header(None, alias="Authorization"),
     session_token: Optional[str] = Header(None, alias="X-Session-Token"),
     session_query: Optional[str] = Query(None, alias="session"),
 ) -> Dict[str, Any]:
@@ -288,7 +301,11 @@ def get_current_session(
     X-Session-Token or from the ?session= query parameter.
     Raises 401 if the session is invalid or expired.
     """
-    token = session_token or session_query
+    bearer_token: Optional[str] = None
+    if authorization and authorization.startswith("Bearer "):
+        bearer_token = authorization[len("Bearer ") :].strip()
+
+    token = bearer_token or session_token or session_query
     try:
         return require_session_(token)
     except ValueError as exc:
@@ -1641,6 +1658,21 @@ def api_login(payload: LoginRequest, db: Session = Depends(get_db)) -> Dict[str,
         return {"ok": False, "error": str(exc)}
     except Exception as exc:  # noqa: BLE001
         return {"ok": False, "error": f"Login failed: {str(exc)}"}
+
+
+@app.post("/auth/seed-admin")
+def api_seed_admin(db: Session = Depends(get_db)) -> Dict[str, Any]:
+    try:
+        existing = db.query(User).first()
+        if existing:
+            return {"ok": False, "error": "Users already exist"}
+
+        user = User(username="admin", password="admin123", role="admin")
+        db.add(user)
+        db.commit()
+        return {"ok": True, "message": "Admin created"}
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": str(exc)}
 
 
 @app.get("/auth/ping")
