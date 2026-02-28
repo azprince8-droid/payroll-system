@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 import jwt
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy import (
     Column,
@@ -2577,6 +2578,9 @@ def handle_get(
 
     except Exception as exc:
         return {"ok": False, "error": str(exc)}
+
+
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 
 # If you want to run with: uvicorn main:app --reload
