@@ -759,6 +759,117 @@
       max-width:none;
       margin:0;
     }
+    @media (max-width: 900px){
+      .page{
+        margin:10px auto 22px;
+        padding:0 10px;
+      }
+      .card{
+        padding:12px;
+      }
+      .app-header{
+        flex-direction:column;
+        align-items:flex-start;
+        gap:8px;
+        margin-bottom:12px;
+      }
+      .app-title{
+        font-size:22px;
+      }
+      .topbar{
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      .app-layout{
+        flex-direction:column;
+        min-height:0;
+      }
+      .left-panel,
+      .left-panel.collapsed{
+        width:100%;
+        min-width:0;
+        padding:8px;
+      }
+      .panel-toggle{
+        display:none;
+      }
+      .panel-nav{
+        flex-direction:row;
+        overflow-x:auto;
+        gap:8px;
+        padding-bottom:2px;
+        -webkit-overflow-scrolling:touch;
+      }
+      .panel-nav .tabbtn,
+      .left-panel.collapsed .panel-nav .tabbtn{
+        width:auto;
+        min-width:max-content;
+        margin:0;
+        padding:8px 12px;
+        min-height:36px;
+      }
+      .left-panel .panel-icon{
+        display:none !important;
+      }
+      .left-panel .panel-label{
+        display:inline !important;
+      }
+      .main-content{
+        padding:10px 0 0;
+      }
+      .row{
+        gap:8px;
+      }
+      .field,
+      .fieldWide,
+      .tx-filter,
+      .invoice-toolbar .field{
+        min-width:0;
+        width:100%;
+      }
+      .modal-box{
+        min-width:0;
+        width:calc(100vw - 24px);
+        max-width:calc(100vw - 24px);
+        max-height:88vh;
+        overflow:auto;
+        padding:14px;
+      }
+      .purchase-order-form{
+        grid-template-columns:1fr;
+      }
+      .purchase-order-form .fieldWide{
+        grid-column:auto;
+      }
+      .login-form .field,
+      .login-form .login-row .primary{
+        width:100%;
+      }
+      .tx-table th,
+      .tx-table td,
+      .mc-table th,
+      .mc-table td,
+      .return-table th,
+      .return-table td{
+        font-size:12px;
+        padding:5px;
+      }
+    }
+    @media (max-width: 640px){
+      input,select,button{
+        font-size:16px;
+      }
+      .tabbtn,
+      .subbtn{
+        padding:8px 10px;
+      }
+      .tableWrap{
+        padding:4px;
+      }
+      .small-btn{
+        padding:6px 8px;
+      }
+    }
     @media print{
       body{
         background:#fff;
