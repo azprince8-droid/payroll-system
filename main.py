@@ -43,12 +43,23 @@ PUBLIC_PATHS = {"/docs", "/openapi.json", "/redoc"}
 
 # ================= Database setup =================
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = (os.getenv("DATABASE_URL") or "").strip()
 
 if not DATABASE_URL:
     DATABASE_URL = "sqlite:///./payroll.db"
+else:
+    # Railway/Neon commonly provide postgres:// URLs; SQLAlchemy expects postgresql://
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = "postgresql://" + DATABASE_URL[len("postgres://") :]
+    # Neon requires SSL; enforce it when not explicitly provided.
+    if DATABASE_URL.startswith("postgresql://") and "sslmode=" not in DATABASE_URL:
+        DATABASE_URL += ("&" if "?" in DATABASE_URL else "?") + "sslmode=require"
 
-engine = create_engine(DATABASE_URL)
+engine_kwargs: Dict[str, Any] = {"pool_pre_ping": True}
+if DATABASE_URL.startswith("sqlite"):
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+
+engine = create_engine(DATABASE_URL, **engine_kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -2252,6 +2263,8 @@ def handle_get(
     id_: Optional[str] = Query(None, alias="id"),
     fileName: Optional[str] = None,
     items_b64: Optional[str] = None,
+    authorization: Optional[str] = Header(None, alias="Authorization"),
+    x_session_token: Optional[str] = Header(None, alias="X-Session-Token"),
     db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
     """
@@ -2260,6 +2273,10 @@ def handle_get(
     """
     try:
         act = (action or "").strip()
+        bearer_token: Optional[str] = None
+        if authorization and authorization.startswith("Bearer "):
+            bearer_token = authorization[len("Bearer ") :].strip()
+        resolved_session = (session or "").strip() or (x_session_token or "").strip() or (bearer_token or "").strip()
 
         # Public: root health/info response when no action is provided.
         if not act:
@@ -2286,7 +2303,7 @@ def handle_get(
             users_existing = db.query(User).all()
             if len(users_existing) > 0:
                 # Require admin for additional users
-                sess_for_user = require_session_(session)
+                sess_for_user = require_session_(resolved_session)
                 require_role_(sess_for_user, ["admin"])
 
             existing = db.query(User).filter(User.username == username_clean).first()
@@ -2299,7 +2316,7 @@ def handle_get(
             return {"ok": True, "data": {"username": user_obj.username, "role": user_obj.role}}
 
         # Everything else: requires session
-        sess = require_session_(session)
+        sess = require_session_(resolved_session)
 
         if act == "ping":
             return {
@@ -2608,6 +2625,77 @@ def handle_get(
 
     except Exception as exc:
         return {"ok": False, "error": str(exc)}
+
+
+@api_router.post("/health")
+async def handle_post(
+    request: Request,
+    authorization: Optional[str] = Header(None, alias="Authorization"),
+    x_session_token: Optional[str] = Header(None, alias="X-Session-Token"),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    POST equivalent of the legacy action router.
+    Useful for large payloads that may exceed URL length limits on hosted proxies.
+    """
+    try:
+        payload_any = await request.json()
+    except Exception:
+        payload_any = {}
+    if not isinstance(payload_any, dict):
+        payload_any = {}
+
+    def _opt_str(key: str) -> Optional[str]:
+        val = payload_any.get(key)
+        if val is None:
+            return None
+        return str(val)
+
+    def _opt_float(key: str) -> Optional[float]:
+        val = payload_any.get(key)
+        if val is None or val == "":
+            return None
+        return float(val)
+
+    def _opt_int(key: str) -> Optional[int]:
+        val = payload_any.get(key)
+        if val is None or val == "":
+            return None
+        return int(val)
+
+    return handle_get(
+        action=_opt_str("action") or "",
+        username=_opt_str("username"),
+        password=_opt_str("password"),
+        session=_opt_str("session"),
+        empId=_opt_str("empId"),
+        name=_opt_str("name"),
+        role=_opt_str("role"),
+        monthlySalary=_opt_float("monthlySalary"),
+        visaTotal=_opt_float("visaTotal"),
+        joinDate=_opt_str("joinDate"),
+        status=_opt_str("status"),
+        openingBalance=_opt_float("openingBalance"),
+        from_=_opt_str("from"),
+        to=_opt_str("to"),
+        month=_opt_str("month"),
+        totalHours=_opt_float("totalHours"),
+        totalOvertime=_opt_float("totalOvertime"),
+        entryCount=_opt_int("entryCount"),
+        txId=_opt_str("txId"),
+        date=_opt_str("date"),
+        type=_opt_str("type"),
+        amount=_opt_float("amount"),
+        site=_opt_str("site"),
+        paidBy=_opt_str("paidBy"),
+        notes=_opt_str("notes"),
+        id_=_opt_str("id"),
+        fileName=_opt_str("fileName"),
+        items_b64=_opt_str("items_b64"),
+        authorization=authorization,
+        x_session_token=x_session_token,
+        db=db,
+    )
 
 
 app.include_router(api_router)
