@@ -1794,10 +1794,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
-// Point this to your FastAPI backend
-// If running locally with: uvicorn main:app --reload
-// use: https://payroll-system-production-9ef7.up.railway.app/
-const API_URL = "https://payroll-system-production-9ef7.up.railway.app/api/";
+// Prefer same-origin API so local/prod both work without manual edits.
+const API_URL = window.location.protocol === "file:"
+  ? "http://127.0.0.1:8000/api/"
+  : `${window.location.origin}/api/`;
+const ACTION_API_URL = API_URL + "health";
 const AUTH_STORAGE_KEY = "authSession.v1";
 
 let sessionToken = "";
@@ -1853,6 +1854,13 @@ function loadSavedAuthSession(){
   }
 }
 
+function clearAuthStorage(){
+  localStorage.removeItem("sessionToken");
+  localStorage.removeItem("auth_token");
+  localStorage.removeItem("username");
+  localStorage.removeItem("role");
+}
+
 function applyLoggedOutUi(){
   show(document.getElementById("loginCard"), true);
   show(document.getElementById("appCard"), false);
@@ -1894,6 +1902,7 @@ function handleSessionExpired(errorMessage){
   sessionToken = "";
   currentUser = { username:"", role:"" };
   clearSavedAuthSession();
+  clearAuthStorage();
   applyLoggedOutUi();
   if (st && errorMessage) {
     st.textContent = errorMessage;
@@ -4355,18 +4364,27 @@ async function addUser(){
 }
 
 async function apiGet(params){
-  const url = new URL(API_URL);
+  const url = new URL(ACTION_API_URL);
+  const body = {};
   Object.keys(params).forEach(k => {
-    if (k !== "session") url.searchParams.set(k, params[k]);
+    if (k !== "session") {
+      url.searchParams.set(k, params[k]);
+      body[k] = params[k];
+    }
   });
+  const hasLargePayload = Boolean(body.items_b64) || url.toString().length > 1800;
+  const method = hasLargePayload ? "POST" : "GET";
   
   try {
     const res = await fetch(url.toString(), {
+      method,
       credentials: "include",
       headers: {
+        "Content-Type": "application/json",
         "X-Session-Token": localStorage.getItem("sessionToken"),
         "Authorization": "Bearer " + localStorage.getItem("auth_token")
-      }
+      },
+      body: method === "POST" ? JSON.stringify(body) : undefined
     });
     if (!res.ok) {
       if (res.status === 401) {
@@ -4460,10 +4478,11 @@ async function login(){
     localStorage.setItem("role", json.data.role || "");
     
     const data = json.data;
-    if (data.sessionToken) {
-      localStorage.setItem("sessionToken", data.sessionToken);
-      sessionToken = data.sessionToken;
-    }
+    const resolvedToken = data.sessionToken || data.access_token || "";
+    if (!resolvedToken) throw new Error("Login token missing in response");
+    localStorage.setItem("sessionToken", resolvedToken);
+    localStorage.setItem("auth_token", resolvedToken);
+    sessionToken = resolvedToken;
     currentUser = { username: data.username, role: data.role };
     st.textContent = "";
     await applyLoggedInUi();
@@ -4479,6 +4498,7 @@ function logout(){
   sessionToken = "";
   currentUser = { username:"", role:"" };
   clearSavedAuthSession();
+  clearAuthStorage();
   applyLoggedOutUi();
 }
 
@@ -4486,6 +4506,10 @@ async function tryRestoreSession(){
   const saved = loadSavedAuthSession();
   if (!saved) return;
   sessionToken = saved.sessionToken;
+  localStorage.setItem("sessionToken", saved.sessionToken || "");
+  localStorage.setItem("auth_token", saved.sessionToken || "");
+  localStorage.setItem("username", saved.username || "");
+  localStorage.setItem("role", saved.role || "");
   currentUser = {
     username: saved.username || "",
     role: saved.role || ""
